@@ -2,9 +2,9 @@
 
 set -euo pipefail
 
-GH_REPO="https://github.com/jckuester/awsls"
-TOOL_NAME="awsls"
-TOOL_TEST="awsls --version"
+GH_REPO="https://github.com/blacknon/hwatch"
+TOOL_NAME="hwatch"
+TOOL_TEST="hwatch -V"
 
 fail() {
   echo -e "asdf-$TOOL_NAME: $*"
@@ -13,7 +13,7 @@ fail() {
 
 curl_opts=(-fsSL)
 
-# NOTE: You might want to remove this if awsls is not hosted on GitHub releases.
+# NOTE: You might want to remove this if hwatch is not hosted on GitHub releases.
 if [ -n "${GITHUB_API_TOKEN:-}" ]; then
   curl_opts=("${curl_opts[@]}" -H "Authorization: token $GITHUB_API_TOKEN")
 fi
@@ -38,7 +38,7 @@ download_release() {
   version="$1"
   filename="$2"
 
-  url="$GH_REPO/releases/download/v${version}/${TOOL_NAME}_${version}_$(get_platform)_$(get_arch).tar.gz"
+  url="$GH_REPO/releases/download/${version}/${TOOL_NAME}-${version}.$(get_arch)-$(get_platform).tar.gz"
 
   echo "* Downloading $TOOL_NAME release $version..."
   curl "${curl_opts[@]}" -o "$filename" -C - "$url" || fail "Could not download $url"
@@ -58,7 +58,7 @@ install_version() {
     tool_cmd="$(echo "$TOOL_TEST" | cut -d' ' -f1)"
 
     mkdir -p "$install_path"/bin
-    cp "$ASDF_DOWNLOAD_PATH"/"$tool_cmd" "$install_path"/bin
+    cp "$ASDF_DOWNLOAD_PATH"/bin/"$tool_cmd" "$install_path"/bin
 
     test -x "$install_path/bin/$tool_cmd" || fail "Expected $install_path/bin/$tool_cmd to be executable."
 
@@ -70,24 +70,30 @@ install_version() {
 }
 
 get_platform() {
-  uname -s | tr '[:upper:]' '[:lower:]'
+  local platform
+  platform=$(uname -s)
+  case $platform in
+  "Linux")
+    echo "unknown-linux-gnu"
+    ;;
+  "Darwin")
+    echo "apple-darwin"
+    ;;
+  *)
+    exit 1
+    ;;
+  esac
 }
 
 get_arch() {
   local arch
   arch=$(uname -m)
   case $arch in
-  "x86_64")
-    echo "amd64"
-    ;;
-  "arm")
-    echo "armv7" # Super best effort - TODO: find useful way to split armv6/armv7 maybe
-    ;;
   "aarch64" | "arm64")
-    echo "arm64"
+    echo "aarch64"
     ;;
   *)
-    exit 1
+    echo "$arch"
     ;;
   esac
 }
